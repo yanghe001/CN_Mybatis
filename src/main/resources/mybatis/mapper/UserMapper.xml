@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dao.UserDao">
+
+    <select id="selectOne" parameterType="Integer" resultType="User">
+        select * from user where id = #{id}
+    </select>
+
+    <resultMap id="userAttr" type="User">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="age" column="age"/>
+    </resultMap>
+    <select id="selectAll" resultMap="userAttr">
+        select * from user
+    </select>
+
+    <select id="selectManyByName" parameterType="String" resultMap="userAttr">
+        select * from user where name like #{name}
+    </select>
+
+    <select id="selectUserByPage" parameterType="page.Page" resultMap="userAttr">
+        select * from user limit #{offset},#{pageSize}
+    </select>
+
+    <delete id="deleteUserById" parameterType="Integer" >
+        delete from user where id = #{id}
+    </delete>
+
+    <!-- 因为 id 自动生成 可以加上这两个参数 反向赋值给类实例
+        useGeneratedKeys="true" 声明此处添加的 id 用的是自增长
+        keyProperty="id" 将 id 值 传递给当前方法的参数中的 id 属性
+    -->
+    <insert id="insertUser" parameterType="User" useGeneratedKeys="true" keyProperty="id">
+        insert into user(name,age) values(#{name},#{age})
+    </insert>
+
+
+    <!-- 一对一 用户：用户信息 方式一-->
+    <resultMap id="user_userInfo" type="User">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="age" column="age"/>
+        <association property="userInfo" javaType="UserInfo">
+            <id property="id" column="id"/>
+            <result property="user_id" column="user_id"/>
+            <result property="card"  column="card"/>
+            <result property="birth_date" column="birth_date"/>
+        </association>
+    </resultMap>
+    <select id="selectUserAndUserInfo" parameterType="Integer" resultMap="user_userInfo">
+            select * from user a,u_info b where a.id=b.user_id and a.id=#{id}
+    </select>
+
+    <!-- 一对一 用户：用户信息 方式二 -->
+    <select id="selectUserAndUserInfo2" parameterType="Integer" resultMap="user_userInfo2">
+        select * from user where id =#{id}
+    </select>
+    <resultMap id="user_userInfo2" type="User">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="age" property="age"/>
+        <!-- column是传的参数, select是调用的查询 -->
+        <association property="userInfo" column="id" select="selectUserInfo" fetchType="lazy"/> <!-- 延迟加载 使用时再加载-->
+    </resultMap>
+    <select id="selectUserInfo" parameterType="Integer" resultType="UserInfo">
+        select * from u_info where user_id=#{id}
+    </select>
+
+
+    <!-- 一对多 用户：订单-->
+    <resultMap id="user_orders" type="User">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="age" column="age"/>
+        <collection property="orderList" ofType="Order" fetchType="lazy"> <!-- 延迟加载 使用时再加载-->
+            <id property="id" column="o_id"/>
+            <result property="user_id" column="user_id"/>
+            <result property="name" column="o_name"/>
+        </collection>
+    </resultMap>
+    <select id="selectUserAndOrder" parameterType="Integer" resultMap="user_orders">
+        select a.* , b.*
+        from user a , u_order b
+        where a.id=b.user_id
+        and  a.id = #{id}
+    </select>
+
+    <!--
+     如果使用 $ ,则必须使用 @Param 注解，否则 ${name} 会认为是要从参数中取名为 name 的属性
+     注意 ${} 做字符串拼接使用 '${}' 而不是 ${}
+     类似 String sql = “select ..... from tt where name='”+name+"'";
+     sql 拼接有注入风险
+
+     #{} 占位符，此处使用 #{name} 而不是 ‘${name}’
+    -->
+    <!-- 必须使用 $ 场景 -->
+    <select id="test" parameterType="String" resultMap="user_userInfo">
+        select * from user order by id ${name}
+    </select>
+    <select id="test2" parameterType="String" resultMap="user_userInfo">
+        select  * from ${name}
+    </select>
+
+
+    <!-- 动态SQL  -->
+    <!-- if-->
+    <select id="selectDySql" resultType="User">
+        select * from user
+        where
+        <if test="name!=null and name!=''">name=#{name}</if>
+        <if test="id>=1"> and id>#{id}</if>
+        <if test="flag == false">and age=18</if>
+    </select>
+    <!-- choose -->
+    <select id="selectDySql2" resultType="User">
+        select * from user
+        where
+        <choose>
+            <when test="id != null">id>#{id}</when>
+            <when test="name != null">name=#{name}</when>
+            <otherwise>age=18</otherwise>
+        </choose>
+    </select>
+
+    <!-- where 如果条件不成立 不加 where关键字 如果有 and or 开头的会自动去掉 -->
+    <select id="selectDySql3" resultType="User">
+        select * from user
+        <where>
+            <if test="name!=null and name!=''">name=#{name}</if>
+            <if test="id>=1">and id>#{id}</if>
+            <if test="flag == false">and age=18</if>
+        </where>
+    </select>
+
+    <!-- set 标签 主要你用于 update 中-->
+    <update id="updateDySql">
+        update  user
+        set
+        <if test="name!=null and name!=''">name=#{name}</if>
+        <if test="id>=1"> and id>#{id} </if>
+        <if test="flag == false">and age=18</if>
+        where id = #{id}
+    </update>
+    <update id="updateDySql2">
+        update  user
+        <set>
+            <if test="name!=null and name!=''">name=#{name}</if>
+            <if test="id>=1">and id>#{id}</if>
+            <if test="flag == false">and age=18</if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!-- Trim 标签
+     <trim prefix="where" prefixOverrides="and|or"> 等价于 where
+     prefix="where"             where 开头
+     suffix="test"              test 结尾
+     prefixOverrides="and|or" 表示会除去开头的 and 或 or
+     suffixOverrides=","      去除最后的,
+    -->
+    <select id="selectDySql4" resultType="User">
+        select * from user
+        <trim prefix="where" prefixOverrides="and|or" >
+            <if test="name!=null and name!=''">name=#{name}</if>
+            <if test="id>=1"> and id>#{id} </if>
+            <if test="flag == false">and age=18</if>
+        </trim>
+    </select>
+
+    <!-- Foreach 标签 -->
+    <select id="selectDySql5" resultType="User">
+        select * from user
+        where id in
+        <foreach collection="list" item="id" index="ind" open="(" close=")" separator="," >
+            #{id}
+        </foreach>
+    </select>
+
+    <!--
+     复用 SQL
+     1.定义一段 sql
+     2.引入
+      -->
+    <sql id="tmp">
+        id,name,age
+    </sql>
+    <select id="selectDySql5" resultType="User">
+        select
+        <include refid="tmp"/>
+        from user
+    </select>
+
+</mapper>

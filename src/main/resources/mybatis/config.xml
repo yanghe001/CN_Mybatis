@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<!-- 配置mybatis的环境信息:   各标签的位置顺序如下[顺序不对会报错]:
+properties?,settings?,typeAliases?,typeHandlers?,objectFactory?,objectWrapperFactory?,reflectorFactory?,plugins?,environments?,databaseIdProvider?,mappers?
+ -->
+<configuration>
+
+    <!-- 引入外部配置文件  数据相关参数 -->
+    <properties resource="db.properties"/>
+
+    <!--  设置Mybatis的一些运行参数：日志,缓存.... -->
+    <!--<settings>
+        &lt;!&ndash; name 属性值固定选项； value 属性值固定选项 &ndash;&gt;
+        <setting name="logImpl" value="STDOUT_LOGGING"/>
+    </settings>-->
+
+
+    <!--设置类型别名：在执行sql语句的时候，如果不设置别名。每次在指定的时候都需要包名+类名，得写的长 -->
+    <typeAliases>
+        <typeAlias type="pojo.User" alias="User"/>
+        <typeAlias type="pojo.Order" alias="Order"/>
+        <typeAlias type="pojo.UserInfo" alias="UserInfo"/>
+    </typeAliases>
+
+    <environments default="development">
+        <environment id="development">
+            <!-- 配置 JDBC 事务控制，由 Mybatis 进行管理 -->
+            <transactionManager type="JDBC"/>
+            <!-- 配置数据源，采用dbcp连接池 -->
+            <dataSource type="POOLED">
+                <property name="driver" value="${driver}"/>
+                <property name="url" value="${url}"/>
+                <property name="username" value="${username}"/>
+                <property name="password" value="${password}"/>
+            </dataSource>
+        </environment>
+    </environments>
+
+    <mappers>
+        <!-- 映射文件 -->
+        <mapper resource="mybatis\mapper\UserMapper.xml"/>
+    </mappers>
+
+
+
+</configuration>
